@@ -66,3 +66,94 @@ campuslink-main/
 │   └── config/         # DB and server config files
 ├── database/           # SQL schema and sample data
 └── tests/              # Selenium-based test cases
+
+👥 Contributors
+Fadi Bayan
+
+Zeinab Abo Hamdan
+
+Jana Badra
+
+Sara Omar
+
+Ayoub Nasr
+
+📌 Key Takeaways
+Applied Agile methodology over 5 sprints
+
+Practiced full-stack collaboration using GitHub and Jira
+
+Strengthened skills in backend authentication, database logic, and frontend responsiveness
+
+Addressed real-world development challenges (e.g., deployment issues, session handling)
+
+
+📬 Contact
+For questions or collaborations:
+📧 fadibayan4@gmail.com
+📍 American University of Beirut, Lebanon
+
+
+
+🧰 Getting Started
+Prerequisites
+Node.js and npm installed
+
+MySQL server running locally
+
+
+Installation : 
+
+1. Clone the repository 
+
+git clone https://github.com/yourusername/campuslink.git
+cd campuslink
+
+2. Install dependencies
+
+Frontend (React):
+cd client
+npm install
+
+
+Backend (Node.js):
+cd ../server
+npm install
+
+
+Environment Variables :
+
+Create .env files in both client/ and server/ with the required variables (samples below).
+
+Start development servers
+
+Backend: 
+npm start
+
+Frontend:
+In another terminal:
+cd client
+npm start
+
+
+🗂️ Environment Variable Samples
+.env for server/
+
+PORT=5000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=yourpassword
+DB_NAME=campuslink
+JWT_SECRET=your_jwt_secret
+EMAIL_USER=your_email@example.com
+EMAIL_PASS=your_email_password
+
+
+
+.env for client/
+REACT_APP_API_URL=http://localhost:5000
+
+
+
+
+
