@@ -67,6 +67,7 @@ campuslink-main/
 ├── database/           # SQL schema and sample data
 └── tests/              # Selenium-based test cases
 
+
 👥 Contributors
 Fadi Bayan
 
@@ -78,6 +79,8 @@ Sara Omar
 
 Ayoub Nasr
 
+
+
 📌 Key Takeaways
 Applied Agile methodology over 5 sprints
 
@@ -88,10 +91,14 @@ Strengthened skills in backend authentication, database logic, and frontend resp
 Addressed real-world development challenges (e.g., deployment issues, session handling)
 
 
+
+
 📬 Contact
 For questions or collaborations:
 📧 fadibayan4@gmail.com
 📍 American University of Beirut, Lebanon
+
+
 
 
 
@@ -100,6 +107,8 @@ Prerequisites
 Node.js and npm installed
 
 MySQL server running locally
+
+
 
 
 Installation : 
@@ -121,6 +130,8 @@ cd ../server
 npm install
 
 
+
+
 Environment Variables :
 
 Create .env files in both client/ and server/ with the required variables (samples below).
@@ -134,6 +145,8 @@ Frontend:
 In another terminal:
 cd client
 npm start
+
+
 
 
 🗂️ Environment Variable Samples
