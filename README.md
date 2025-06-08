@@ -37,6 +37,9 @@
 - Unit testing using Selenium (Login, Signup, Event Navigation)
 - Integration testing with mocked user flows
 
+### 🚀 Deployment
+- Deployed on a Contabo VPS
+
 ---
 
 ## 🛠️ Tech Stack
@@ -51,6 +54,7 @@
 | Testing    | Selenium                      |
 
 ---
+
 
 ## 📁 Project Structure
 
