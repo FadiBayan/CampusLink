@@ -1,17 +1,38 @@
 import React, { useState, useEffect } from "react";
 import PasswordInput from "./PasswordInput";
-import { tryLogin } from "../../auth-api";
+import { requestLogin, requestClubLogin } from "./auth_requests.js";
 import { Link, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "../../static/LoginPage/Login.css"; // ✅ Import custom CSS for extra styling
+import "../../static/LoginPage/Login.css";
 
 const LoginForm = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [userEmail, setEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [clubCRN, setClubCRN] = useState("");
+  const [clubPassword, setClubPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [role, setRole] = useState("student");
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Expose state setters to the window object so external scripts can access them
+    window.React = window.React || {};
+    window.React.setEmail = setEmail;
+    window.React.setUserPassword = setUserPassword;
+    window.React.setClubCRN = setClubCRN;
+    window.React.setClubPassword = setClubPassword;
+
+    document.body.classList.add("login-page");
+    return () => {
+      document.body.classList.remove("login-page");
+      // Clean up after component is unmounted
+      delete window.React.setEmail;
+      delete window.React.setUserPassword;
+      delete window.React.setClubCRN;
+      delete window.React.setClubPassword;
+    };
+  }, []);
 
   useEffect(() => {
     document.body.classList.add("login-page");
@@ -24,48 +45,81 @@ const LoginForm = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setMessage("");
-    setError("");
 
     try {
-      const responseMessage = await tryLogin(email, password);
+      setMessage('Logging into user account...');
 
-      if (typeof responseMessage === "object") {
-        setError(responseMessage.message || "An unexpected error occurred.");
-      } else {
-        setMessage(responseMessage);
-        localStorage.setItem("userRole", role);
-        role === "student" ? navigate("/student") : navigate("/home");
+      if (role === 'cabinet'){
+        setMessage(`Logging into club account as ${userEmail}...`);
+        const clubLoginResult = await requestClubLogin(userEmail, userPassword, clubCRN, clubPassword);
+
+        if (clubLoginResult.success){
+          setMessage(clubLoginResult.message);
+          navigate("/home");
+        }
+        else {
+          setError(clubLoginResult.message);
+          setMessage("");
+        }
       }
+      else {
+          
+        const userLoginResult = await requestLogin(userEmail, userPassword);
+
+        if (userLoginResult.success){
+          setMessage(userLoginResult.message);
+          navigate("/home");
+
+        }
+        else {
+          setError(userLoginResult.message);
+          setMessage("");
+        }
+      }
+
     } catch (err) {
-      setError(err.message || "Login failed. Please check your credentials.");
+      setError("Login failed. Please check your credentials and try again.");
     }
+
   };
 
   return (
-    <div className="container-fluid vh-100">
-      <div className="row h-100 m-0">
+    <div className="login-container">
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          width: "100%",   
+          height: "100%",        
+          margin: 0              
+        }}
+      >
         {/* LEFT - INFO SECTION */}
         
-        <div className="col-6 d-flex align-items-center justify-content-center gradient-bg text-white" id="quote" >
+        <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+            }} >
           {/* 🌟 CampusLink Logo - Centered */}
           
 
-          <div className="info-content text-center ">
-          <img
-            src={require("../../images/logo.png")}
-            alt="CampusLink Logo"
-            className="campus-logo"
-          />
-            <h2 className="fw-bold">Join Our Community</h2>
-            <p>
-            Discover vibrant campus events, connect with student communities, and seamlessly manage your event experience—all in one place!
+          <div style={{justifyContent: "center", textAlign: "center"}}>
+            <img
+              src={require("../../images/logo.png")}
+              alt="CampusLink Logo"
+              className="campus-logo"
+            />
+            <h1>American University of Beirut</h1>
+            <p style={{color:"white", fontSize: "20px", fontWeight: "bolder", marginTop: "-00px"}}>
+              Discover vibrant campus events, connect with student communities, and seamlessly manage your event experience—all in one place!
             </p>
           </div>
         </div>
 
         {/* RIGHT - LOGIN FORM */}
-        <div className="col-6 d-flex align-items-center justify-content-center bg-white">
+        <div style={{display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "white", marginRight: "10%", padding: "60px"}}>
           <div className="card login-card p-4 shadow-lg border-0">
             <h2 className="text-center fw-bold mb-4" id = "IN">Log in</h2>
 
@@ -86,6 +140,7 @@ const LoginForm = () => {
                 </div>
                 <div className="form-check">
                   <input
+                    id="cabinet-radio"
                     className="form-check-input"
                     type="radio"
                     name="loginType"
@@ -104,8 +159,9 @@ const LoginForm = () => {
               <input
                 type="email"
                 className="form-control"
+                id="email_input"
                 placeholder="Enter your email"
-                value={email}
+                value={userEmail}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
@@ -116,8 +172,8 @@ const LoginForm = () => {
               <label className="form-label">Password </label>
               <PasswordInput
                 id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={userPassword}
+                onChange={(e) => setUserPassword(e.target.value)}
                 required
               />
             </div>
@@ -130,13 +186,20 @@ const LoginForm = () => {
                   <input
                     type="text"
                     className="form-control"
+                    id="club_crn_input"
                     placeholder="Enter club CRN"
+                    onChange={(e) => setClubCRN(e.target.value)}
                     required
                   />
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Club Password</label>
-                  <PasswordInput id="clubPassword" />
+                  <PasswordInput 
+                  id="clubPassword" 
+                  value={clubPassword}
+                  onChange={(e) => setClubPassword(e.target.value)}
+                  required
+                  />
                 </div>
               </>
             )}
@@ -144,6 +207,7 @@ const LoginForm = () => {
             {/* Login Button */}
             <button
               type="submit"
+              id="login-btn"
               className="btn login-btn w-100"
               onClick={handleSubmit}
             >

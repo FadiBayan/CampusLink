@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import PasswordInput from "./PasswordInput";
-import { trySignup } from "../../auth-api";
+import { requestSignup } from "./auth_requests.js";
 import { Link, useNavigate } from "react-router-dom";
 import zxcvbn from "zxcvbn";
 import "bootstrap/dist/css/bootstrap.min.css"; 
-import "../../static/LoginPage/signup.css"; // ✅ Separate styling for signup
+import "../../static/LoginPage/signup.css";
 
 const SignupForm = () => {
   const [email, setEmail] = useState("");
@@ -27,15 +27,16 @@ const SignupForm = () => {
     setError(""); 
 
     try {
-        const responseMessage = await trySignup(email, password);
-        if (typeof responseMessage === "object") {
-            setError(responseMessage.message || "An unexpected error occurred."); 
-        } else {
-            setMessage(responseMessage); 
-            navigate("/login");
+        const responseMessage = await requestSignup(email, password);
+        
+        if (responseMessage.success){
+          setMessage(responseMessage.message); 
+        }
+        else {
+          setError(responseMessage.message || "An unexpected error occurred."); 
         }
     } catch (err) {
-        setError("⚠ Failed to fetch. Please check your connection or server.");
+        setError("⚠ Failed to fetch. This might be a server error, but please check your connection.");
     }
   };
 

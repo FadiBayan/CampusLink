@@ -12,25 +12,27 @@ import cookieparser from 'cookie-parser';
 import { checkUserInDB, deleteExpiredTokens, getUserFromDB, getUsernameFromPassResetToken, insertNewUser, insertVerifToken, modifyUserPassword } from './dbfuncs_auth.js';
 import { getClubFromDB } from './dbfuncs_auth.js';
 import { sendVerificationLink, sendPassResetLink } from './mailerFuncs.js';
-import { getUsername_from_email } from '../helperfuncs.js';
+import { isValidAUBEmail, getUsername_from_email, isValidAUBClubCRN } from '../helperfuncs.js';
 
 dotenv.config({path: '../../../.env'});
 
-const app = express();
+const router = express.Router();
 
-const bytespertoken = 5;
+const bytespertoken = 4;
 const jwt_secretKey = process.env.JWT_SECRET;
 
 //Middleware:
-app.use(cors({
-    origin: 'http://173.249.5.42:80', // Replace with your frontend URL
+/*
+router.use(cors({
+    origin: process.env.FRONTEND_URL,
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
     credentials: true, // This is important for sending cookies
 }));
+*/
 
-app.use(express.json());
-app.use(cookieparser());
+router.use(express.json());
+router.use(cookieparser());
 
 /**
  * The salt rounds for the bcrypt password encryption algorithm.
@@ -39,10 +41,19 @@ const saltRounds = 10;
 
 
 //#region [Log-in Request Handler]
-app.post(`/login-user`, async (req, res) => {
+router.post(`/login-user`, async (req, res) => {
 
 
-    const {username, password} = req.body;
+    const {email, password} = req.body;
+
+    //CHECK IF EMAIL HAS RIGHT DOMAIN
+
+    if (!email || email.length === 0 || !isValidAUBEmail(email)){
+        res.status(400).json({success: false, message: "With respect from the server: Email must end with @mail.aub.edu"});
+        return;
+    }
+
+    const username = getUsername_from_email(email);
 
     //Need to check for username in database:
 
@@ -70,7 +81,7 @@ app.post(`/login-user`, async (req, res) => {
         const user_jwt_payload = {
             username: username,
             role: 'user',
-            club: ''
+            club_crn: ''
         };
 
         //Now, I need to sign the jwt:
@@ -78,15 +89,16 @@ app.post(`/login-user`, async (req, res) => {
         const user_jwt_signed = jwt.sign(user_jwt_payload, jwt_secretKey, {expiresIn: '1hr'});
 
         //Next, I need to store the token in cookies:
-        res.cookie('token', user_jwt_signed, {
+        res.cookie('authtoken', user_jwt_signed, {
             httpOnly: true,
             secure: false, //TODO: Need to set this to true when we switch from http to https
-            sameSite: 'strict',
+            SameSite: 'None',
+            path: '/',
             maxAge: 3600000
         });
 
 
-        res.status(200).json({success: true, message: "login successful"});
+        res.status(200).json({success: true, message: "login successful", jwt: "jwt: " + user_jwt_signed});
     
     }
     else {
@@ -98,10 +110,9 @@ app.post(`/login-user`, async (req, res) => {
 //#endregion
 
 
-app.post(`/login-club`, async (req, res) => {
+router.post(`/login-club`, async (req, res) => {
 
-    const {username, user_password, crn, club_password} = req.body;
-
+    const { email, user_password, club_crn, club_password } = req.body;
     /**
      * 1. Check username in database (DONE)
      * 2. Check user password (DONE)
@@ -111,6 +122,18 @@ app.post(`/login-club`, async (req, res) => {
      * 6. Update the jwt (DONE)
      * 7. Add the club access to database
      */
+
+    if (!email || email.length === 0 || !isValidAUBEmail(email)){
+        res.status(400).json({success: false, message: "Invalid email address. Make sure email ends with @mail.aub.edu"});
+        return;
+    }
+
+    if (!club_crn || club_crn.length === 0 || !isValidAUBClubCRN(club_crn)){
+        res.status(400).json({success: false, message: "Invalid club CRN."});
+        return;
+    }
+
+    const username = getUsername_from_email(email);
 
     const user_DB = await getUserFromDB(username);
 
@@ -131,7 +154,7 @@ app.post(`/login-club`, async (req, res) => {
             return;
         }
 
-        const club_DB = await getClubFromDB(crn);
+        const club_DB = await getClubFromDB(club_crn);
 
         if (club_DB){
 
@@ -146,17 +169,18 @@ app.post(`/login-club`, async (req, res) => {
             const user_jwt_payload = {
                 username: username,
                 role: 'cabinet',
-                club: crn
+                club_crn: club_crn
             };
 
             //Now, I need to sign the jwt:
             const user_jwt_signed = jwt.sign(user_jwt_payload, jwt_secretKey, {expiresIn: '1hr'});
 
             //Next, I need to store the token in cookies:
-            res.cookie('token', user_jwt_signed, {
+            res.cookie('authtoken', user_jwt_signed, {
                 httpOnly: true,
                 secure: false, //TODO: Need to set this to true when we switch from http to https
-                sameSite: 'strict',
+                SameSite: 'None',
+                path: '/',
                 maxAge: 3600000
             });
 
@@ -177,7 +201,7 @@ app.post(`/login-club`, async (req, res) => {
 
 
 //#region [Sign-up Request Handler]
-app.post(`/signup`, async (req, res) => {
+router.post(`/signup`, async (req, res) => {
 
     console.log(process.env.GMAIL_APP_PASS);
 
@@ -187,10 +211,9 @@ app.post(`/signup`, async (req, res) => {
     //Need to validate email address:
 
     //Validate AUB email:
-    const email_Vald = validateAUBEmail(email);
 
-    if (!email_Vald){
-        res.status(401).json({success: false, message: 'invalid email address'});
+    if (!email || email.length === 0 || !isValidAUBEmail(email)){
+        res.status(400).json({success: false, message: "Email must end with @mail.aub.edu"});
         return;
     }
 
@@ -222,14 +245,19 @@ app.post(`/signup`, async (req, res) => {
     //To fix this problem, we will use a cryptographically secure token:
     const verif_token = crypto.randomBytes(bytespertoken).toString('hex');
 
-    const emailSent = await sendVerificationLink(email, verif_token);
 
     //Adding the user to the database:
-    insertNewUser(username, email, hashedPass, verif_token);
+    const addUser_result = await insertNewUser(username, email, hashedPass);
+    
+    if (!addUser_result.success){
+        return res.status(400).json(addUser_result);
+    }
     console.log('User added to database successfully.');
 
+    
+    const emailSent = await sendVerificationLink(email, verif_token);
     //Need to add the verification token to the verifToken table:
-    insertVerifToken(username, verif_token);
+    const insert_verifToken_result = await insertVerifToken(username, verif_token);
 
     res.json({ 
         success: true,
@@ -243,8 +271,34 @@ app.post(`/signup`, async (req, res) => {
 
 
 //#region [Verification Request Handler]
-app.get('/verify', async (req, res) => {
 
+router.get('/verify/confirm', (req, res) => {
+    const token = req.query.token;
+
+    if (!token) {
+        return res.status(400).send("<h1>Error</h1><p>Invalid verification request.</p>");
+    }
+
+    // Render a simple HTML page with a button that redirects to the actual verification
+    res.send(`
+        <html>
+        <head>
+            <title>Email Verification</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h2>Confirm Your Email</h2>
+            <p>Click the button below to verify your email:</p>
+            <a href="${process.env.AUTHENTICATION_URL}/verify?token=${token}" 
+               style="display: inline-block; padding: 12px 20px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 5px; font-size: 16px;">
+                Confirm Verification
+            </a>
+        </body>
+        </html>
+    `);
+});
+
+router.get('/verify', async (req, res) => {
+    
     //A token would be passed here. This token is stored in the database and is mapped to a specific username:
     /**
      *   1. Read token from query parameter.
@@ -258,7 +312,6 @@ app.get('/verify', async (req, res) => {
     const [row] = await db.execute('CALL GetUserFromVerifToken(?)',[verif_token_string]);
 
     const verif_username = (row[0][0])?row[0][0].username : null;
-    
     
     if (verif_username == false){
         res.status(404).json({success: false, message: "Something went wrong. Invalid verification token."});
@@ -275,9 +328,9 @@ app.get('/verify', async (req, res) => {
 });
 //#endregion
 
-app.get('/requestpassreset', async (req, res) => {
+router.get('/requestpassreset', async (req, res) => {
 
-    const {email} = req.email;
+    const { email } = req.email;
 
     if (email == false || email == ''){
         res.status(401).json({success: false, message: "Invalid email address."});
@@ -287,7 +340,7 @@ app.get('/requestpassreset', async (req, res) => {
     const username = getUsername_from_email(email);
 
     //Check if user exists in database:
-    const userExists = checkUserInDB(username);
+    const userExists = await checkUserInDB(username);
 
     if (userExists == false){
         res.status(404).json({success: false, message: "Something went wrong. No such user exists."});
@@ -312,7 +365,7 @@ app.get('/requestpassreset', async (req, res) => {
 /**
  * This is the request handler responsible for the 
  */
-app.get('/passreset', async (req, res) => {
+router.get('/passreset', async (req, res) => {
 
     const { newpassword } = req.body;
 
@@ -336,26 +389,17 @@ app.get('/passreset', async (req, res) => {
 });
 
 
-function validateEmailDomain(email, domain){
+router.post('/logout', (req, res) => {
 
-    //Need to make sure that email is a valid email address with the right domain.
+    res.clearCookie('authtoken', {
+        httpOnly: true,
+        secure: false, // Change to true for HTTPS
+        SameSite: 'None',
+        path: '/' 
+    });
 
-    if (!email.includes('@')) return false;
-
-    if (email.substring(email.indexOf('@') + 1, email.length) != domain) return false;
-
-    if (email.substring(0, email.indexOf('@')).length == 0) return false;
-
-    return true;
-
-}
-
-function validateAUBEmail(email){
-
-    return validateEmailDomain(email, 'mail.aub.edu');
-
-}
-
+    res.status(200).json({ success: true, message: "Logout successful" });
+});
 
 //#region [Check database for expired verification tokens]
 
@@ -371,4 +415,6 @@ setInterval(() => {
 //#endregion
 
 
-app.listen(5000, () => console.log(`Listening on port 5000...`));
+export default router;
+
+//app.listen(5000, '0.0.0.0', () => console.log(`Listening on port 5000...`));

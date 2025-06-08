@@ -1,10 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import LoginForm from "./Pages/LoginPage/LoginForm";
 import SignupForm from "./Pages/LoginPage/SignUpForm";
-import HomePage from "./Pages/Cabinet_Choice/HomePage";
-import CabinetPage from "./Pages/Cabinet_Page/CabinetPage";  
-import StudentPage from "./Pages/Student_Page/StudentPage";  
-import "./static/LoginPage/Login.css";    
+import StudentHomePage from "./Pages/Home_Page/StudentHomePage"
 
 const App = () => {
   return (
@@ -18,13 +15,8 @@ const App = () => {
         <Route path="/signup" element={<SignupForm />} />  
 
         {/* 🔹 Home Route (Cabinet Selection) */}
-        <Route path="/home" element={<HomePage />} />  
+        <Route path="/home" element={<StudentHomePage />} />
 
-        {/* 🔹 Cabinet Section */}
-        <Route path="/cabinet" element={<CabinetPage />} />  
-
-        {/* 🔹 Student Section */}
-        <Route path="/student" element={<StudentPage />} />  
       </Routes>
     </div>
   );

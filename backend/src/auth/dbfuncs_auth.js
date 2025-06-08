@@ -23,7 +23,7 @@ export async function getUserFromDB(username){
  */
 export async function checkUserInDB(username){
 
-    const [rows] = await db.execute('SELECT CheckUserExists(?)', [username]);
+    const [rows] = await db.execute('SELECT CheckUserExists(?) AS userExists', [username]);
 
     return rows[0].userExits;
 
@@ -51,10 +51,10 @@ export async function getClubFromDB(crn){
  * @param {*} verif_token 
  * @returns an object with three fields: success (boolean) and a message string, and the error if one was caught.
  */
-export async function insertNewUser(username, email, hashedPass, verif_token){
+export async function insertNewUser(username, email, hashedPass){
 
     try {
-        await db.execute('CALL InsertNewUser(?, ?, ?, ?)', [username, email, hashedPass, verif_token]);
+        await db.execute('CALL InsertNewUser(?, ?, ?)', [username, email, hashedPass]);
         return { success: true, message: 'User-insertion query successful.'}
     }
     catch (error) {

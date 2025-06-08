@@ -1,38 +1,38 @@
 -- @block Table to store user accounts
-CREATE TABLE Users (
+CREATE TABLE users (
+
     username VARCHAR(50) PRIMARY KEY,
+    firstname VARCHAR(50) DEFAULT NULL,
+    familyname VARCHAR(50) DEFAULT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    profile_pic_url VARCHAR(2048) DEFAULT NULL,
+    bio VARCHAR(2048) DEFAULT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    verified BOOLEAN DEFAULT FALSE,
-    verificationToken VARCHAR(50),
-    CHECK (email LIKE '%@mail.aub.edu')
+    verified BOOLEAN DEFAULT FALSE
 );
 
 -- @block Table to store club accounts
-CREATE TABLE Clubs (
+CREATE TABLE clubs (
+
     crn INT PRIMARY KEY,
     password_hash VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE DEFAULT NULL
-);
+    title VARCHAR(255) UNIQUE NOT NULL,
+    bio VARCHAR(512) DEFAULT NULL,
+    email VARCHAR(255) UNIQUE DEFAULT NULL,
+    profile_pic_url VARCHAR(2048) DEFAULT NULL
 
--- @block Table to track club followers (Users following clubs)
-CREATE TABLE ClubFollowers (
-    username VARCHAR(50) NOT NULL,
-    crn INT NOT NULL,
-    PRIMARY KEY (username, crn),
-    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE,
-    FOREIGN KEY (crn) REFERENCES Clubs(crn) ON DELETE CASCADE
 );
 
 -- @block Table to store club accesses by users
-CREATE TABLE Club_Accesses (
+CREATE TABLE club_accesses (
+
     crn INT PRIMARY KEY,
     username VARCHAR(50) NOT NULL
 );
 
 -- @block Table to store the temporary verification tickets
-CREATE TABLE VerificationTokens (
+CREATE TABLE verification_tokens (
+
     token VARCHAR(50) PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -41,7 +41,8 @@ CREATE TABLE VerificationTokens (
 );
 
 -- @block Table to store temporary password reset tokens
-CREATE TABLE PassResetTokens (
+CREATE TABLE passreset_tokens (
+
     token VARCHAR(50) PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -49,127 +50,125 @@ CREATE TABLE PassResetTokens (
     INDEX idx_username (username)
 );
 
--- @block Table to store posts of users and clubs
-CREATE TABLE Posts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL, -- Always track the user who posts
-    clubCRN INT DEFAULT NULL, -- Only if the post was posted by a club account
+CREATE TABLE IF NOT EXISTS club_followers (
+
+    club_crn INT,
+    username VARCHAR(50),
+    follow_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(club_crn, username),
+    FOREIGN KEY (club_crn) REFERENCES clubs (crn) ON DELETE CASCADE,
+    FOREIGN KEY (username) REFERENCES users (username) ON DELETE CASCADE,
+    INDEX idx_username (username) -- useful when retrieving the clubs that a certain user follows
+
+);
+
+
+
+CREATE TABLE IF NOT EXISTS posts (
+
+    post_id INT AUTO_INCREMENT PRIMARY KEY,
+    club_crn INT,
+    posted_by VARCHAR(50),
+
+    is_event BOOLEAN DEFAULT NULL, -- If it is an event post then this won't be null
+
     title VARCHAR(255) NOT NULL,
-    details TEXT CHECK (CHAR_LENGTH(details) <= 2200),
-    imageURL VARCHAR(2048),
-    type ENUM('announcement', 'event') NOT NULL,
-    capacity INT UNSIGNED DEFAULT NULL, -- Only used if type = 'event'
-    event_date DATETIME DEFAULT NULL,   -- Only used if type = 'event'
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP DEFAULT NULL,
-    INDEX idx_title (title),
-    INDEX idx_username (username)
+    details TEXT CHECK (CHAR_LENGTH(details) <= 2500),
+    image_url VARCHAR(2048) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (club_crn) REFERENCES clubs (crn) ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_title (title)
+
+);
+
+CREATE TABLE IF NOT EXISTS user_seen_posts (
+
+    post_id INT,
+    username VARCHAR(50),
+    seen_at TIMESTAMP,
+    PRIMARY KEY (post_id, username),
+    FOREIGN KEY (post_id) REFERENCES posts (post_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (username) REFERENCES users (username) ON DELETE CASCADE ON UPDATE CASCADE
+
 );
 
 -- @block Table for post likes (Users can like announcements & events)
-CREATE TABLE Likes (
-    username VARCHAR(50) NOT NULL,
-    post_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (username, post_id),
-    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS post_likes (
+    post_id INT,
+    username VARCHAR(50),
+    liked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (post_id, username),
+    FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
 );
 
--- @block Table to track like counts for each post
-CREATE TABLE PostLikeCount (
-    post_id INT PRIMARY KEY,
-    like_count INT DEFAULT 0,
-    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE
-);
-
--- @block Table for post comments
-CREATE TABLE PostComments (
+-- @block Table for post comments (Users can comment on announcements & events)
+CREATE TABLE IF NOT EXISTS post_comments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     post_id INT NOT NULL,
     username VARCHAR(50) NOT NULL,
-    comment_text TEXT NOT NULL,
+    comment_text TEXT CHECK (CHAR_LENGTH(comment_text) <= 2500) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE
+    FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
 );
 
--- @block Table for tracking event participation
-CREATE TABLE EventParticipants (
+-- Event Schemas:
+
+CREATE TABLE IF NOT EXISTS club_events (
+
+    event_id INT PRIMARY KEY,
+    club_crn INT,
+    event_title VARCHAR(255) NOT NULL,
+    event_details TEXT CHECK (CHAR_LENGTH(event_details) <= 2500),
+    event_max_participation INT UNSIGNED DEFAULT NULL,
+    event_ticket_price FLOAT UNSIGNED,
+    event_exclusive BOOLEAN DEFAULT FALSE,
+    event_date DATE,
+    event_startTime TIME,
+    event_endTime TIME,
+    event_location_name VARCHAR(255),
+    event_location_latitude DOUBLE, 
+    event_location_longitude DOUBLE,
+    INDEX idx_title (event_title), -- Useful to select events by title
+    INDEX idx_club (club_crn)
+
+);
+
+-- @block Table for event participants (Users attending events)
+CREATE TABLE IF NOT EXISTS event_participants (
     event_id INT NOT NULL,
     username VARCHAR(50) NOT NULL,
-    status ENUM('going', 'interested', 'not going') DEFAULT 'going',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (event_id, username),
-    FOREIGN KEY (event_id) REFERENCES Posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE
+    FOREIGN KEY (event_id) REFERENCES club_events(event_id) ON DELETE RESTRICT,
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE RESTRICT
 );
 
--- @block Table for club announcements
-CREATE TABLE ClubAnnouncements (
-    post_id INT PRIMARY KEY,
-    crn INT NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    image_url VARCHAR(2048),
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP DEFAULT NULL,
-    shares_count INT DEFAULT 0,
-    comments_count INT DEFAULT 0,
-    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (crn) REFERENCES Clubs(crn) ON DELETE CASCADE
+-- INTERESTS TABLES:
+
+-- @block Table for interests (Users and posts can have interests)
+CREATE TABLE IF NOT EXISTS interests (
+    interest_name VARCHAR(255) PRIMARY KEY
 );
 
--- @block Table for club events
-CREATE TABLE ClubEvents (
-    post_id INT PRIMARY KEY,
-    crn INT NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    image_url VARCHAR(2048),
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP DEFAULT NULL,
-    event_date DATETIME NOT NULL,
-    event_location VARCHAR(255),
-    max_participation INT DEFAULT NULL,
-    ticket_price DECIMAL(10,2) DEFAULT NULL,
-    exclusive BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (crn) REFERENCES Clubs(crn) ON DELETE CASCADE
+-- @block Table to store post-to-interest mapping
+CREATE TABLE post_interests (
+    post_id INT,
+    interest_name VARCHAR(255),
+    PRIMARY KEY (post_id, interest_name), -- Composite primary key
+    FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE,
+    FOREIGN KEY (interest_name) REFERENCES interests(interest_name) ON DELETE CASCADE
 );
 
--- @block Table for interests
-CREATE TABLE Interests (
-    name VARCHAR(255) PRIMARY KEY,
-    number_of_posts INT DEFAULT 0
-);
-
--- @block Table for linking posts to interests
-CREATE TABLE PostInterests (
-    post_id INT NOT NULL,
-    interest_name VARCHAR(255) NOT NULL,
-    PRIMARY KEY (post_id, interest_name),
-    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (interest_name) REFERENCES Interests(name) ON DELETE CASCADE
-);
-
--- @block Table for user interests
-CREATE TABLE UserInterests (
+-- @block Table to store user interests
+CREATE TABLE user_interests (
     username VARCHAR(50),
     interest_name VARCHAR(255),
-    interest_points INT DEFAULT 1,
-    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    interest_points INT DEFAULT 1, -- Tracks how much the user interacts with this interest
+    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the interest was last used
     PRIMARY KEY (username, interest_name),
-    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE,
-    FOREIGN KEY (interest_name) REFERENCES Interests(name) ON DELETE CASCADE
-);
-
--- @block Table for tracking user seen posts
-CREATE TABLE UserSeenPosts (
-    username VARCHAR(50),
-    post_id INT,
-    seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (username, post_id),
-    FOREIGN KEY (username) REFERENCES Users(username) ON DELETE CASCADE,
-    FOREIGN KEY (post_id) REFERENCES Posts(id) ON DELETE CASCADE
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+    FOREIGN KEY (interest_name) REFERENCES interests(interest_name) ON DELETE CASCADE
 );

@@ -10,14 +10,14 @@
   box-shadow: none; /* Remove Bootstrap default shadow */
 }
 
-/* 🌟 Input Field Hover & Focus Effect */
+
 .form-control:focus {
   border-color: #1e3c72; /* Match blue theme */
   box-shadow: 0 0 8px rgba(30, 60, 114, 0.6);
   outline: none;
 }
 
-/* 🌟 Make Labels Consistent */
+
 .form-label {
   font-size: 16px;
   font-weight: bold;
@@ -25,14 +25,14 @@
   margin-bottom: 5px;
 }
 
-/* 🌟 Make Radio Buttons More Professional */
+
 .form-check-input {
   width: 18px;
   height: 18px;
   accent-color: #1e3c72;
 }
 
-/* 🌟 LOGIN BUTTON STYLING */
+
 .login-btn {
   background: linear-gradient(135deg, #2a5298, #1e3c72);
   color: white;
@@ -67,7 +67,9 @@
   color: white;
 }
 
-/* 🌟 Adjust Form Size for Better UX */
+
+
+
 .login-card {
   width: 450px; /* Slightly wider */
   padding: 30px;
@@ -77,28 +79,30 @@
   transition: min-height 0.3s ease-in-out;
 }
 
-/* 🌟 Scroll Inside Form if Too Long */
+
 .login-card {
-  max-height: 600px;
+  max-height: 800px;
   overflow-y: auto;
 }
 
 .campus-logo {
-  transform: translate(0,-25%);
+  transform: translate(5%,-5%);
   width: 50%;
   filter: drop-shadow(0px 0px 5px rgba(255, 255, 255, 0.4)); /* Subtle glow */
   height:50%;
+  border-radius: 50%;
 }
+
 #IN{
   text-shadow: none;
   color: #1e3c72;
 }
-html, body {
-  overflow: hidden;
-  height: 100%;
-}
 
-#quote{
-  transform: translate(-7%);
-}
 
+
+.login-container {
+  height: 100vh;
+  width: 100%;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.5)), url('/public/images/green_oval_AUB.png');
+  background-size: cover;
+}

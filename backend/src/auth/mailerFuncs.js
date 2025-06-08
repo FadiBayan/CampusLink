@@ -7,6 +7,7 @@ const result = dotenv.config({path: '../../../.env'});
 const gmail_app_pass = process.env.GMAIL_APP_PASS;
 const auth_url = process.env.AUTHENTICATION_URL;
 
+
 /**
  * This function sends a verification link to the specified email. The link contains the /verify route, and is passed a verification token as a query parameter.
  * @param {*} email the email of the user the verification link will be sent to.
@@ -24,9 +25,11 @@ export async function sendVerificationLink(email, verif_token){
         }
     });
 
+    
+    const verificationLink = `${auth_url}/verify/confirm?token=${verif_token}`;
 
     const mailOptions = {
-        from: 'campuslinkteam@gmail.com',
+        from: '"CampusLink Team" <campuslinkteam@gmail.com>',
         to: email,
         subject: 'Verify Your Account',
         html: `
@@ -34,12 +37,7 @@ export async function sendVerificationLink(email, verif_token){
                 <h2 style="color: #0056b3;">Hello,</h2>
                 <p>Thank you for signing up! To complete your registration, please verify your account by clicking the button below:</p>
                 
-                <p style="text-align: center;">
-                    <a href="${auth_url}/verify?token=${verif_token}" 
-                       style="display: inline-block; padding: 12px 20px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 5px; font-size: 16px;">
-                        Verify Account
-                    </a>
-                </p>
+                <p>Verification Token: ${verif_token} </p>
                 
                 <p>This link will expire in 1 hour. If you did not sign up, please ignore this email.</p>
                 
